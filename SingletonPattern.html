@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>单例模式</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
+</head>
+
+<body>
+</body>
+
+</html>
+<script>
+// 代理代理模式
+var CreateDiv = function(html) {
+    this.html = html;
+    this.init();
+}
+
+CreateDiv.prototype.init = function() {
+    var div = document.createElement('div');
+    div.innerHTML = this.html;
+    document.body.appendChild(div);
+};
+
+var ProxySingletonCreateDiv = (function() {
+    var instance;
+    return function(html) {
+        if (!instance) {
+            instance = new CreateDiv(html);
+        }
+        return instance;
+    }
+})()
+
+new ProxySingletonCreateDiv('1') === new ProxySingletonCreateDiv('2') // true
+
+// 闭包封装私有变量
+var user = (function() {
+    var _name = 'seven',
+        age = 20;
+    return {
+        getUserInfo: function() {
+            return _name + '-' + age
+        }
+    }
+})();
+
+// 通用惰性单例 =》闭包 缓存代理模式
+var getSingle = function(fn) {
+    var result;
+    return function() {
+        return result || (result = fn.apply(this, arguments))
+    }
+}
+</script>

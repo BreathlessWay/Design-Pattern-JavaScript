@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>节流</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
+</head>
+
+<body>
+    <input type="text" id="user">
+</body>
+
+</html>
+<script>
+var throttle = function(fn, interval) {
+    var _selt = fn, // callback
+        timer, // 定时器
+        firstTime = true; // 是否第一次调用
+
+    return function() {
+        var args = arguments,
+            _me = this;
+        if (firstTime) {
+            _self.apply(_me, args); // 第一次调用不需延时
+            return false;
+        }
+
+        if (timer) {
+            return false
+        }
+
+        timer = setTimeout(function() {
+            clearTimeout(timer);
+            timer = null;
+            _self.apply(_me, args)
+        }, interval || 500)
+    }
+}
+
+window.onload = function() {
+    throttle(function() {}, 5000)
+}
+</script>
