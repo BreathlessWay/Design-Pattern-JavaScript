@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>命令模式</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
+    <style>
+    .ball {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #000;
+        position: relative;
+    }
+    </style>
+</head>
+
+<body>
+    <div id='name'>
+        fff
+    </div>
+    <article>
+        <section>
+            <span class='ball'></span>
+            <div>
+                <input type="text" placeholder='请输入运动' class='left'>
+            </div>
+        </section>
+        <footer>
+            <button class='start'>
+                运动
+            </button>
+            <br>
+            <button class='reset'>
+                重置
+            </button>
+        </footer>
+    </article>
+</body>
+
+</html>
+<script>
+window.onload = function() {
+    var _div = document.getElementById('name');
+    _l = _div.getBoundingClientRect();
+    //dom.getBoundingClientRect() 返回一个DOMRect 对象包含了一组用于描述边框的只读属性——width,height,left、top、right和bottom,除了 width 和 height 外的属性都是相对于视口的左上角位置而言的
+    console.log(_l);
+    var animates = [],
+        isAnimating = false,
+        oBall = document.querySelector('.ball'),
+        oLeft = document.querySelector('.left'),
+        oStart = document.querySelector('.start'),
+        oReset = document.querySelector('.reset');
+    // 发布订阅
+    var Event = (function() {
+        var listeners = {};
+        return {
+            listen: function(key, fn) {
+                if (!Array.isArray(listeners[key])) {
+                    listeners[key] = [];
+                }
+                listeners[key].push(fn);
+            },
+            trigger: function() {
+                var key = Array.prototype.shift.call(arguments);
+                if (Array.isArray(listeners[key])) {
+                    for (var i = 0, fn; fn = listeners[key][i++];) {
+                        fn.apply(this, arguments)
+                    }
+                } else {
+                    throw new Error('没有此事件!');
+                }
+            },
+            remove: function(key, fn) {
+                var fns = listeners[key];
+                if (!Array.isArray(fns)) {
+                    throw new Error('没有此事件!');
+                }
+                if (fn) {
+                    for (var l = fns.length - 1; l >= 0; l--) {
+                        if (fns[l] === fn) {
+                            fns.splice(l, 1);
+                        }
+                    }
+                } else {
+                    fns && delete listeners[key];
+                }
+            }
+        }
+    })();
+    var fn1 = function() { console.log(1) }
+    Event.listen('click', fn1);
+    Event.listen('click', function() { console.log(2) });
+    Event.listen('click', function() { console.log(3) });
+
+    Event.trigger('click');
+    Event.remove('click', fn1);
+    Event.trigger('click');
+    Event.remove('click');
+    // Event.trigger('click');
+
+    // 策略模式
+    var tween = {
+        linear: function(t, b, c, d) {
+            return c * t / d + b;
+        },
+        easeIn: function(t, b, c, d) {
+            return c * (t /= d) * t + b;
+        },
+        stringEaseIn: function(t, b, c, d) {
+            return c * (t /= d) * t * t * t * t + b;
+        },
+        stringEaseOut: function(t, b, c, d) {
+            return c * ((t = t / d - 1) * t * t * t * t + 1) + b;
+        },
+        sineaseIn: function(t, b, c, d) {
+            c * (t /= d) * t * t + b;
+        },
+        sineaseOut: function(t, b, c, d) {
+            return c * ((t = t / d - 1) * t * t + 1) + b;
+        }
+    };
+
+    var Animate = function(dom) {
+        this.dom = dom;
+        this.startTime = 0;
+        this.startPos = 0;
+        this.endPos = 0;
+        this.propertyName = null;
+        this.easing = null;
+        this.duration = null;
+    };
+    Animate.prototype.start = function(propertyName, endPos, duration, easing) {
+        this.startTime = +new Date();
+        this.startPos = this.dom.getBoundingClientRect()[propertyName];
+        this.propertyName = propertyName;
+        this.endPos = endPos;
+        this.duration = duration;
+        this.easing = tween[easing];
+        var self = this,
+            timeId = setInterval(function() {
+                if (self.step() === false) {
+                    clearInterval(timeId);
+                    Event.trigger('goon');
+                }
+            }, 19);
+    };
+    Animate.prototype.step = function() {
+        var t = +new Date();
+        if (t >= this.startTime + this.duration) {
+            this.update(this.endPos);
+            return false;
+        }
+        var pos = this.easing(t - this.startTime, this.startPos, this.endPos - this.startPos, this.duration);
+        this.update(pos);
+    };
+    Animate.prototype.update = function(pos) {
+        this.dom.style[this.propertyName] = pos + 'px'
+    }
+
+    // 命令模式
+    var StartMove = function(receiver, pos) {
+        this.receiver = receiver;
+        this.pos = pos;
+        this.oldPos = 8;
+    };
+    StartMove.prototype.execute = function() {
+        this.receiver.start('left', this.pos, 1000, 'easeIn');
+        this.oldPos = this.receiver.dom.getBoundingClientRect()[this.receiver.propertyName]
+    };
+    StartMove.prototype.unexecute = function() {
+        this.receiver.start('left', this.oldPos, 1000, 'easeIn');
+    };
+    var animate = new Animate(oBall),
+        startMove = null;
+
+    Event.listen('goon', function() {
+        var fn = animates.shift();
+        fn && fn.call(startMove);
+    });
+
+    oStart.addEventListener('click', function() {
+        startMove = new StartMove(animate, oLeft.value);
+        animates.push(startMove.execute);
+    });
+    oReset.addEventListener('click', function() {
+        animates.push(startMove.unexecute);
+    });
+}
+</script>
