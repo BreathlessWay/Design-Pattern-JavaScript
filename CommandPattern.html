@@ -145,6 +145,7 @@ window.onload = function() {
         var self = this,
             timeId = setInterval(function() {
                 if (self.step() === false) {
+                    isAnimating = false;
                     clearInterval(timeId);
                     Event.trigger('goon');
                 }
@@ -180,16 +181,26 @@ window.onload = function() {
         startMove = null;
 
     Event.listen('goon', function() {
-        var fn = animates.shift();
-        fn && fn.call(startMove);
+        while (fn = animates.shift()) {
+            isAnimating = true;
+            fn.call(startMove);
+        }
     });
 
     oStart.addEventListener('click', function() {
         startMove = new StartMove(animate, oLeft.value);
         animates.push(startMove.execute);
+        if (!isAnimating) {
+            isAnimating = true;
+            Event.trigger('goon');
+        }
     });
     oReset.addEventListener('click', function() {
         animates.push(startMove.unexecute);
+        if (!isAnimating) {
+            isAnimating = true;
+            Event.trigger('goon');
+        }
     });
 }
 </script>
