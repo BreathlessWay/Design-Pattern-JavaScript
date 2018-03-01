@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>模版方法模式</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
+</head>
+
+<body>
+</body>
+
+</html>
+<script>
+var Person = function() {};
+Person.prototype.eat = function() {
+    throw new Error('子类需要重写父类的抽象方法eat');
+};
+Person.prototype.drink = function() {
+    throw new Error('子类需要重写父类的抽象方法drink');
+};
+Person.prototype.play = function() {
+    throw new Error('子类需要重写父类的抽象方法play');
+};
+Person.prototype.needPlay = function() {
+    return true;
+};
+Person.prototype.sleep = function() {
+    throw new Error('子类需要重写父类的抽象方法sleep');
+};
+Person.prototype.live = function() {
+    this.eat();
+    this.drink();
+    if (this.needPlay()) {
+        this.play();
+    };
+    this.sleep();
+};
+
+var Student = function(name) {
+    this.name = name;
+    Person.apply(this, arguments);
+};
+Student.prototype = new Person();
+Student.prototype.eat = function() {
+    console.log(this.name + '在吃饭了');
+};
+Student.prototype.drink = function() {
+    console.log(this.name + '在喝水了');
+};
+Student.prototype.play = function() {
+    console.log(this.name + '出去玩了');
+};
+Student.prototype.needPlay = function() {
+    return window.confirm('想出去玩吗?')
+};
+Student.prototype.sleep = function() {
+    console.log(this.name + '睡觉了');
+};
+var student = new Student('掌声');
+
+student.live();
+</script>
