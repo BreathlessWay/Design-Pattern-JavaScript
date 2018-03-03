@@ -1,14 +1,137 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-<title>享元模式</title>
-<meta name="description" content="">
-<meta name="keywords" content="">
-<link href="" rel="stylesheet">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>享元模式</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
 </head>
+
 <body>
-    
 </body>
+
 </html>
+<script>
+window.onload = function() {
+
+    // uploadType作为内部共享状态
+    var Upload = function(uploadType) {
+        this.uploadType = uploadType;
+    };
+    Upload.prototype.delFile = function(id) {
+        uploadManager.setExternalState(id, this);
+        if (this.fileSize < 3000) {
+            return this.dom.parentNode.removeChild(this.dom);
+        }
+        if (window.confirm('确定要删除' + this.fileName)) {
+            return this.dom.parentNode.removeChild(this.dom);
+        }
+    };
+
+    // 外部状态管理
+    var uploadManager = (function() {
+        var uploadDataBase = {};
+        return {
+            add: function(id, uploadType, fileName, fileSize) {
+                var flyWeightObj = uploadFactory.create(uploadType);
+                var dom = document.createElement('div');
+                dom.innerHTML = '<span>文件名称: ' + fileName + ', 文件大小: ' + fileSize + ' </span><button class="delFile">删除</button > ';
+                dom.querySelector('.delFile').onclick = function() {
+                    flyWeightObj.delFile(id);
+                };
+                document.body.appendChild(dom);
+                uploadDataBase[id] = {
+                    fileName: fileName,
+                    fileSize: fileSize,
+                    dom: dom
+                };
+                return flyWeightObj;
+            },
+            setExternalState: function(id, flyWeightObj) {
+                var uploadData = uploadDataBase[id];
+                for (var p in uploadData) {
+                    flyWeightObj[p] = uploadData[p];
+                }
+            }
+        }
+    })();
+
+    // 工厂模式做闭包和缓存代理来创建上传对象
+    var uploadFactory = (function() {
+        var createdFlyWeightObjs = {};
+        return {
+            create: function(uploadType) {
+                if (createdFlyWeightObjs[uploadType]) {
+                    return createdFlyWeightObjs[uploadType]
+                }
+                return createdFlyWeightObjs[uploadType] = new Upload(uploadType)
+            }
+        }
+    })();
+
+    // 上传方法
+    var startUpload = function(uploadType, files) {
+        for (var i = 0, file; file = files[i++];) {
+            uploadManager.add(i, uploadType, file.fileName, file.fileSize);
+        }
+    };
+
+    startUpload('plugin', [{
+        fileName: '三字经',
+        fileSize: '1000'
+    }, {
+        fileName: '诗经',
+        fileSize: '4000'
+    }, {
+        fileName: '国学',
+        fileSize: '1000'
+    }, {
+        fileName: '离骚',
+        fileSize: '6000'
+    }]);
+
+    startUpload('flash', [{
+        fileName: 'photoshop',
+        fileSize: '1000'
+    }, {
+        fileName: 'dreamweaver',
+        fileSize: '4000'
+    }, {
+        fileName: 'flash',
+        fileSize: '1000'
+    }]);
+
+
+    // 通用对象池创建回收工厂函数
+    var objectPoolFactory = function(createObjFn) {
+        var objectPool = [];
+        return {
+            create: function() {
+                return objectPool.length === 0 ? createObjFn(this, arguments) : objectPool.shift();
+            },
+            recover: function(obj) {
+                objectPool.push(obj);
+            }
+        }
+    };
+
+    var iframeFactory = objectPoolFactory(function() {
+        var oIframe = document.createElement('iframe');
+        document.body.appendChild(oIframe);
+        oIframe.onload = function() {
+            oIframe.onload = null; //防止iframe重复加载bug
+            iframeFactory.recover(oIframe);
+        };
+        return oIframe;
+    });
+
+    var iframe1 = iframeFactory.create();
+    iframe1.src = 'https://www.baidu.com';
+
+    var iframe2 = iframeFactory.create();
+    iframe2.src = 'http://www.qq.com/';
+}
+</script>

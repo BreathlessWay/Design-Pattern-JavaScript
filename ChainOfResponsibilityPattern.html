@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>职责链模式</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
+</head>
+
+<body>
+</body>
+
+</html>
+<script>
+window.onload = function() {
+    var order500 = function(orderType, pay, stock) {
+        if (orderType === 1 && pay === true) {
+            console.log('500元定金预购,获得100元优惠券');
+        } else {
+            return 'next';
+        }
+    };
+
+    var order200 = function(orderType, pay, stock) {
+        if (orderType === 2 && pay === true) {
+            console.log('200元定金预购,获得50元优惠券');
+        } else {
+            return 'next';
+        }
+    };
+
+    var orderNormal = function(orderType, pay, stock) {
+        if (stock > 0) {
+            console.log('普通购买');
+        } else {
+            console.log('库存不足')
+        }
+    };
+
+    var Chain = function(fn) {
+        this.fn = fn;
+        this.success = null;
+    };
+
+    Chain.prototype.setNext = function(next) {
+        return this.success = next;
+    };
+
+    Chain.prototype.passRequest = function() {
+        var ret = this.fn.apply(this, arguments);
+        if (ret === 'next') {
+            return this.success && this.success.passRequest.apply(this.success, arguments);
+        };
+        return ret;
+    };
+
+    var chain500 = new Chain(order500),
+        chain200 = new Chain(order200),
+        chainNormal = new Chain(orderNormal);
+
+    chain500.setNext(chain200);
+    chain200.setNext(chainNormal);
+
+    chain500.passRequest(1, true, 30);
+    chain500.passRequest(1, false, 30);
+    chain500.passRequest(1, true, 0);
+    chain500.passRequest(1, false, 0);
+
+    chain500.passRequest(3, false, 0);
+
+    // 命令模式
+    var Ajax = {
+        getData: function(callback, i) {
+            setTimeout(function() {
+                callback();
+                console.log(i)
+            }, (4 - i) * 1000)
+        }
+    };
+
+    var AjaxCommand = function(receiver) {
+        this.receiver = receiver;
+    };
+
+    AjaxCommand.prototype.execute = function(callback, i) {
+        this.receiver.getData(callback, i);
+    }
+
+    var ajaxCommand = new AjaxCommand(Ajax);
+
+    // 异步职责链
+    Chain.prototype.next = function() {
+        return this.success && this.success.passRequest.apply(this.success, arguments);
+    };
+
+    var fn1 = new Chain(function() {
+        var _self = this
+        ajaxCommand.execute(function() {
+            _self.next();
+        }, 1);
+    });
+    var fn2 = new Chain(function() {
+        var _self = this
+        ajaxCommand.execute(function() {
+            _self.next();
+        }, 2);
+    });
+    var fn3 = new Chain(function() {
+        var _self = this
+        ajaxCommand.execute(function() {}, 3);
+    });
+    fn1.setNext(fn2).setNext(fn3);
+    fn1.passRequest()
+}
+</script>

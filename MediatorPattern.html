@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>中介者模式</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <link href="" rel="stylesheet">
+</head>
+
+<body>
+    <section>
+        <form id='orderForm'>
+            <div>
+                <label for="color">选择颜色:</label>
+                <select name="color" id="color">
+                    <option></option>
+                    <option value="red">红色</option>
+                    <option value="blue">蓝色</option>
+                </select>
+            </div>
+            <br>
+            <div>
+                <label for="memory">选择内存:</label>
+                <select name="memory" id="memory">
+                    <option></option>
+                    <option value="16">16</option>
+                    <option value="32">32</option>
+                </select>
+            </div>
+            <br>
+            <div>
+                <label for="number">购买数量:</label>
+                <input type="text" name="number" id="number" />
+            </div>
+        </form>
+        <p>
+            你所选颜色为: <span class='selectColor'></span>
+        </p>
+        <p>
+            你购买数量为: <span class='selectNum'></span>台
+        </p>
+        <p>
+            你所选内存大小为: <span class='selectMemory'></span>G
+        </p>
+        <button class='orderBtn' disabled>购买</button>
+    </section>
+    <script>
+    window.onload = function() {
+        var goods = {
+            'red|16': 2,
+            'red|32': 5,
+            'blue|16': 0,
+            'blue|32': 5
+        }
+
+        var orderForm = document.getElementById('orderForm'),
+            orderColorSel = orderForm.color,
+            orderNumInput = orderForm.number,
+            orderMemorySel = orderForm.memory;
+
+        var mediator = (function() {
+            var orderColorShow = document.querySelector('.selectColor'),
+                orderNumShow = document.querySelector('.selectNum'),
+                orderMemoryShow = document.querySelector('.selectMemory'),
+                orderBtn = document.querySelector('.orderBtn');
+            return {
+                changed: function(obj) {
+                    var color = orderColorSel.value,
+                        number = orderNumInput.value,
+                        memory = orderMemorySel.value,
+                        stock = goods[color + '|' + memory];
+                    if (obj === orderColorSel) {
+                        orderColorShow.innerHTML = color;
+                    }
+                    if (obj === orderNumInput) {
+                        orderNumShow.innerHTML = number;
+                    }
+                    if (obj === orderMemorySel) {
+                        orderMemoryShow.innerHTML = memory;
+                    }
+                    if (!color) {
+                        orderBtn.disabled = true;
+                        orderBtn.innerHTML = '请选择颜色';
+                        return
+                    }
+                    if (!memory) {
+                        orderBtn.disabled = true;
+                        orderBtn.innerHTML = '请选择内存';
+                        return
+                    }
+                    if (!Number.isInteger(number - 0) && number > 0) {
+                    	console.log(number)
+                        orderBtn.disabled = true;
+                        orderBtn.innerHTML = '输入购买数量';
+                        return
+                    }
+
+                    if (number > stock) {
+                        orderBtn.disabled = true;
+                        orderBtn.innerHTML = '库存不足';
+                        return
+                    }
+
+                    orderBtn.disabled = false;
+                    orderBtn.innerHTML = '购买';
+                }
+            }
+        })();
+
+        orderColorSel.onchange = function() {
+            mediator.changed(this);
+        };
+
+        orderNumInput.oninput = function() {
+            mediator.changed(this);
+        };
+
+        orderMemorySel.onchange = function() {
+            mediator.changed(this);
+        }
+    }
+    </script>
+</body>
+
+</html>
+<script>
+var Player = function(name, teamColor) {
+    this.name = name;
+    this.teamColor = teamColor;
+    this.state = 'alive';
+};
+
+Player.prototype.win = function() {
+    console.log(this.name + '赢了');
+};
+
+Player.prototype.lose = function() {
+    console.log(this.name + '输了');
+};
+
+Player.prototype.die = function() {
+    this.state = 'dead';
+    playDirector.ReceiveMessage('playerDead', this);
+};
+
+Player.prototype.remove = function() {
+    playDirector.ReceiveMessage('removePlayer', this);
+};
+
+Player.prototype.changeTeam = function(color) {
+    playDirector.ReceiveMessage('changeTeam', this, color);
+};
+
+var playFactory = function(name, teamColor) {
+    var player = new Player(name, teamColor);
+    playDirector.ReceiveMessage('addPlayer', player);
+    return player;
+};
+
+var playDirector = (function() {
+    var players = {}, //所有玩家
+        operations = {}; //中介者可以使用的方法
+
+    operations.addPlayer = function(player) {
+        var teamColor = player.teamColor;
+        players[teamColor] = players[teamColor] || [];
+        players[teamColor].push(player);
+    };
+
+    operations.removePlayer = function(player) {
+        var teamColor = player.teamColor,
+            teamPlayers = players[teamColor] || [];
+        for (var i = teamPlayers.length - 1; i >= 0; i--) {
+            if (teamPlayers[i] === player) {
+                teamPlayers.splice(i, 1);
+            }
+        }
+    };
+
+    operations.changeTeam = function(player, newTeamColor) {
+        operations.removePlayer(player);
+        player.teamColor = newTeamColor;
+        operations.addPlayer(player);
+    };
+
+    operations.playerDead = function(player) {
+        var teamColor = player.teamColor,
+            all_dead = true,
+            teamPlayers = players[teamColor] || [];
+        for (var i = 0, player; player = teamPlayers[i++];) {
+            if (player.state !== 'dead') {
+                all_dead = false;
+            }
+        };
+
+        if (all_dead === true) {
+            for (var i = 0, player; player = teamPlayers[i++];) {
+                player.lose();
+            };
+
+            for (var color in players) {
+                if (color !== teamColor) {
+                    var teamPlayers = players[color];
+                    for (var i = 0, player; player = teamPlayers[i++];) {
+                        player.win();
+                    };
+                }
+            };
+        }
+    };
+
+    var ReceiveMessage = function() {
+        var message = Array.prototype.shift.call(arguments);
+        operations[message].apply(this, arguments);
+    };
+
+    return {
+        ReceiveMessage: ReceiveMessage
+    }
+})();
+
+var play1 = playFactory('章三', 'red'),
+    play2 = playFactory('李四', 'red'),
+    play3 = playFactory('王五', 'red'),
+    play4 = playFactory('赵六', 'red');
+
+var play5 = playFactory('Lily', 'blue'),
+    play6 = playFactory('LiLei', 'blue'),
+    play7 = playFactory('Hmm', 'blue'),
+    play8 = playFactory('John', 'blue');
+
+play1.remove();
+
+play7.changeTeam('red');
+
+play1.die();
+play2.die()
+play3.die()
+play4.die()
+play7.die()
+</script>
